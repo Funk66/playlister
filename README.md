@@ -5,10 +5,19 @@ Synchronize a Spotify playlist with the daily music programme from [Radio Swiss 
 
 ## Dependencies
 * BeautifulSoup
+* Requests
 * Spotipy
+* PyYAML
 
 
 ## Usage
-Fill in you Spotify credentials at the top of the script and run it
+Fill in your credentials in the conf.sample.yml file and save it as conf.yml.
 
+Install all dependencies:
+
+```shell
+pip install -r requirements.txt
+```
+
+Run the script
 

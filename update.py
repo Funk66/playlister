@@ -1,17 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import yaml
 import requests
 from bs4 import BeautifulSoup
 from spotipy import Spotify, util, client
 
-
-scopes = ''
-username = ''
-client_id = ''
-client_secret = ''
-redirect_uri = ''
-playlist_id = ''
+conf = yaml.safe_load(open("conf.yml"))
 
 print('Downloading...')
 page = requests.get('http://www.radioswissjazz.ch/en/music-programme')
@@ -22,10 +17,10 @@ songs = [span.text.strip() for span in soup.find_all('span', class_="titletag")]
 music = zip(artists, songs)
 
 print('Starting Spotify session...')
-token = util.prompt_for_user_token(username=username, scope=scopes,
-                                   client_id=client_id,
-                                   client_secret=client_secret,
-                                   redirect_uri=redirect_uri)
+token = util.prompt_for_user_token(username=conf['username'], scope=conf['scopes'],
+                                   client_id=conf['client_id'],
+                                   client_secret=conf['client_secret'],
+                                   redirect_uri=conf['redirect_uri'])
 spotify = Spotify(auth=token)
 
 good = '\033[92m\u2713\033[0m'
@@ -46,8 +41,8 @@ except KeyboardInterrupt:
   pass
 
 print('Updating paylist...')
-spotify.user_playlist_replace_tracks(username, playlist_id, tracks[:100])
+spotify.user_playlist_replace_tracks(conf['username'], conf['playlist_id'], tracks[:100])
 for i in range(100, len(tracks), 100):
-    spotify.user_playlist_add_tracks(username, playlist_id, tracks[i:i+100])
+    spotify.user_playlist_add_tracks(conf['username'], conf['playlist_id'], tracks[i:i+100])
 print('All done')
 

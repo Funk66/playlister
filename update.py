@@ -1,10 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import re
 import yaml
 import requests
 from bs4 import BeautifulSoup
 from spotipy import Spotify, util, client
+
+
+def clean(title):
+  """ Strip parenthesis and brackets from the song title """
+  return re.sub(r'[\[|\(][^)]*[\]|\)]', '', title).strip()
+
 
 conf = yaml.safe_load(open("conf.yml"))
 
@@ -13,7 +20,7 @@ page = requests.get('http://www.radioswissjazz.ch/en/music-programme')
 print('Parsing...')
 soup = BeautifulSoup(page.text, 'html.parser')
 artists = [span.text.strip() for span in soup.find_all('span', class_="artist")]
-songs = [span.text.strip() for span in soup.find_all('span', class_="titletag")]
+songs = [clean(span.text) for span in soup.find_all('span', class_="titletag")]
 music = zip(artists, songs)
 
 print('Starting Spotify session...')

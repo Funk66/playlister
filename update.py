@@ -3,6 +3,7 @@
 
 import re
 import yaml
+import argparse
 import requests
 from bs4 import BeautifulSoup
 from spotipy import Spotify, util, client
@@ -13,7 +14,10 @@ def clean(title):
   return re.sub(r'[\[|\(][^)]*[\]|\)]', '', title).strip()
 
 
-conf = yaml.safe_load(open("conf.yml"))
+parser = argparse.ArgumentParser(description="Copy RadioSwissJazz's daily program into a playlist on Spotify")
+parser.add_argument('-f', '--file', dest='filename', default='conf.yml')
+args = parser.parse_args()
+conf = yaml.safe_load(open(args.filename))
 
 print('Downloading...')
 page = requests.get('http://www.radioswissjazz.ch/en/music-programme')

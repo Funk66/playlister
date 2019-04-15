@@ -1,6 +1,0 @@
-scopes: playlist-read-private playlist-modify-public playlist-modify-private
-username: username
-client_id: d0d17353d693a1a4751167074eac988771
-client_secret: de18edb3bc3aab0ce678532c243abd6ddf
-redirect_uri: http://localhost:8888/callback
-playlist_id: 69U5xHntyan6fGNVYthenU

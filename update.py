@@ -10,8 +10,8 @@ from spotipy import Spotify, util, client
 
 
 def clean(title):
-  """ Strip parenthesis and brackets from the song title """
-  return re.sub(r'[\[|\(][^)]*[\]|\)]', '', title).strip()
+    """ Strip parenthesis and brackets from the song title """
+    return re.sub(r'[\[|\(][^)]*[\]|\)]', '', title).strip()
 
 
 parser = argparse.ArgumentParser(description="Copy RadioSwissJazz's daily program into a playlist on Spotify")
@@ -21,6 +21,7 @@ conf = yaml.safe_load(open(args.filename))
 
 print('Downloading...')
 page = requests.get('http://www.radioswissjazz.ch/en/music-programme')
+# page = requests.get('http://www.radioswissclassic.ch/en/music-programme')
 print('Parsing...')
 soup = BeautifulSoup(page.text, 'html.parser')
 artists = [span.text.strip() for span in soup.find_all('span', class_="artist")]

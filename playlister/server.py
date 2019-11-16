@@ -1,13 +1,16 @@
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from socketserver import BaseServer
 from threading import Thread
+from typing import TYPE_CHECKING
 
 from . import log
 
+if TYPE_CHECKING:
+    from socketserver import BaseServer
+
 
 class HTTPRequestHandler(BaseHTTPRequestHandler):
-    server: BaseServer
+    server: 'BaseServer'
     spotify_code: str
 
     def do_GET(self):

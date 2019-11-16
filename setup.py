@@ -1,15 +1,12 @@
 from setuptools import setup
 
-from new import __version__
 
-
-setup(name='radiss',
-      version=__version__,
+setup(name='playlister',
+      version='0.1.0',
       author='Guillermo Guirao Aguilar',
       author_email='contact@guillermoguiraoaguilar.com',
-      py_modules=['radiss'],
-      # requires=['spotipy'],
-      description='Smarter data structures',
-      url='https://github.com/Funk66/radiss',
+      py_modules=['playlister'],
+      description='Spotify playlist generator',
+      url='https://github.com/Funk66/playlister',
       license='MIT',
-      classifiers=['Programming Language :: Python :: 3.7'])
+      classifiers=['Programming Language :: Python :: 3.8'])

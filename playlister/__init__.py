@@ -18,7 +18,7 @@ class Config(metaclass=MetaConfig):
     secret: str
     token: str
     refresh: str
-    validity: str
+    validity: int
     path = Path.home() / '.config/playlister/config.yaml'
 
     def __init__(self, path: Path = None):
@@ -38,11 +38,15 @@ class Config(metaclass=MetaConfig):
             raise AttributeError(
                 f"'{attr}' is not a valid configuration parameter")
 
-    def __setattr__(self, attr, value) -> None:
-        if attr not in self.data:
-            raise AttributeError(
-                f"'{attr}' is not a valid configuration parameter")
-        self.data[attr] = value
+    def __setattr__(self, key, value) -> None:
+        self.update(**{key: value})
+
+    def update(self, **kwargs):
+        for key, value in kwargs.items():
+            if key not in self.data:
+                raise AttributeError(
+                    f"'{key}' is not a valid configuration parameter")
+            self.data[key] = value
         with open(self.path, 'w') as output:
             log.info('Updating config')
             dump(self.data, output, default_flow_style=False)

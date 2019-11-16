@@ -22,8 +22,8 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
 
 
 def listen() -> str:
-    bind = ("", 8888)
-    with HTTPServer(bind, HTTPRequestHandler) as HTTPRequestHandler.server:
+    with HTTPServer(("", 8888),
+                    HTTPRequestHandler) as HTTPRequestHandler.server:
         log.info("Listening for authentication callback")
         HTTPRequestHandler.server.serve_forever()
     return HTTPRequestHandler.spotify_code

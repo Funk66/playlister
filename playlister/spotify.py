@@ -1,14 +1,21 @@
 import webbrowser
 from time import time
 from json import loads
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 from base64 import b64encode
 from certifi import where
 from urllib3 import PoolManager
 from urllib3.response import HTTPResponse
 from urllib.parse import urlencode, quote
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Thread
 
-from . import Config, server, log
+from . import Config, log
+from .entities import SpotifyTrack
+
+if TYPE_CHECKING:
+    from socketserver import BaseServer
 
 
 class Spotify:
@@ -44,7 +51,11 @@ class Spotify:
         }
         log.info('Opening browser for authorization')
         webbrowser.open(f"{self.accounts_url}/authorize?{urlencode(payload)}")
-        code = server.listen()
+        with HTTPServer(("", 8888),
+                        HTTPRequestHandler) as HTTPRequestHandler.server:
+            log.info("Listening for authentication callback")
+            HTTPRequestHandler.server.serve_forever()
+        code = HTTPRequestHandler.spotify_code
         self.authenticate(code)
 
     def authenticate(self, code: str) -> None:
@@ -86,7 +97,7 @@ class Spotify:
         Config.update(
             token=data['access_token'], validity=time() + data['expires_in'])
 
-    def search(self, artist: str, title: str):
+    def search(self, artist: str, title: str) -> Optional[SpotifyTrack]:
         params = {
             'limit': 1,
             'type': 'track',
@@ -98,22 +109,36 @@ class Spotify:
         response = self.client.request(
             'GET', f"{self.api_url}/search?{query}", headers=headers)
         data = self.response(response)
-        if data['items']:
-            # track = Track(**data['items'])
-            log.debug(f"Track found")
-            track = data['tracks']['items'][0]
-            track_id = track['id']
-            track_name = track['name']
-            artist = track['artist'][0]['name']
-        else:
-            log.debug("Track not found")
-        return self.get('/search', headers=headers)
+        tracks = data['tracks']['items']
+        if tracks:
+            log.info(f"Track found")
+            track = tracks[0]
+            return SpotifyTrack(track['id'], track['name'],
+                                track['artists'][0]['name'],
+                                track['album'])
+        log.info("Track not found")
+        return None
 
-    def add(self, tracks: List['Track']):
+    def add(self, tracks: list) -> None:
         self.client.request('POST', '')
 
-    def reorder(self, number, range):
+    def reorder(self, number, range) -> None:
         self.client.request('PUT', '')
 
-    def remove(self, tracks):
+    def remove(self, tracks) -> None:
         self.client.request('DELETE', '')
+
+
+class HTTPRequestHandler(BaseHTTPRequestHandler):
+    server: 'BaseServer'
+    spotify_code: str
+
+    def do_GET(self):
+        def shutdown(server):
+            server.shutdown()
+
+        HTTPRequestHandler.spotify_code = self.path.split('=')[1]
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-type", 'text/html')
+        self.end_headers()
+        Thread(target=shutdown, args=(self.server, )).start()

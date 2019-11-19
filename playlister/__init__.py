@@ -1,7 +1,8 @@
 from yaml import load, dump
+from datetime import date
 from logging import getLogger, basicConfig
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 from argparse import ArgumentParser, Namespace
 
 
@@ -66,6 +67,7 @@ class Config(metaclass=MetaConfig):
     token: str
     refresh: str
     validity: float
+    playlists: Dict[str, str]
 
 
 def arguments() -> Namespace:
@@ -79,7 +81,7 @@ def arguments() -> Namespace:
 
 
 def logging():
-    basicConfig(level=10, format='%(message)s')
+    basicConfig(level=20, format='%(message)s')
 
 
 def init():
@@ -87,4 +89,5 @@ def init():
 
 
 log = getLogger('playlister')
+today = date.today()
 logging()

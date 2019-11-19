@@ -7,4 +7,5 @@ if not (Config.client and Config.secret):
     secret = input('Client secret: ')
     Config.update(client=client, secret=secret)
 spotify = Spotify()
-spotify.search('sting', 'breath')
+track = spotify.search('sting', 'breath')
+print(track)

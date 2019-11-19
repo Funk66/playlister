@@ -1,16 +1,63 @@
 from yaml import load, dump
 from logging import getLogger, basicConfig
 from pathlib import Path
-from typing import Union, Dict
+from typing import Any
 from argparse import ArgumentParser, Namespace
+
+
+class ConfigError(Exception):
+    def __init__(self, param: str):
+        self.param = param
+
+    def __str__(self) -> str:
+        return f"'{self.param}' is not a valid configuration parameter"
 
 
 class MetaConfig(type):
     def __new__(mcs, name, bases, namespace):
-        namespace['data']: Dict[str, Union[str, int]] = {}
-        for key, value in namespace['__annotations__'].items():
-            namespace['data'][key] = namespace.get(key)
-        return super().__new__(mcs, name, bases, namespace)
+        fields = namespace['__annotations__'].keys()
+        meta = {
+            'data': dict(zip(fields, [''] * len(fields))),
+            'loaded': False,
+            'path': Path.home() / '.config/playlister/config.yaml',
+        }
+        return super().__new__(mcs, name, bases, {
+            **namespace, '__meta__': meta
+        })
+
+    def __getattr__(self, name: str) -> Any:
+        if name not in self.__meta__['data']:
+            raise ConfigError(name)
+        if not self.__meta__['loaded']:
+            self.load()
+        return self.__meta__['data'][name]
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        self.update(**{name: value})
+
+    def load(self) -> None:
+        if self.__meta__['path'].exists():
+            with open(self.__meta__['path']) as data:
+                log.info('Reading config file')
+                self.__meta__['data'].update(load(data))
+        self.__meta__['loaded'] = True
+
+    def write(self) -> None:
+        path = self.__meta__['path']
+        if not path.parent.exists():
+            path.parent.mkdir(parents=True)
+        with open(path, 'w') as output:
+            log.info('Writing config file')
+            dump(self.__meta__['data'], output, default_flow_style=False)
+
+    def update(self, **kwargs) -> None:
+        for name, value in kwargs.items():
+            if name not in self.__meta__['data']:
+                raise ConfigError(name)
+            if not self.__meta__['loaded']:
+                self.load()
+            self.__meta__['data'][name] = value
+        self.write()
 
 
 class Config(metaclass=MetaConfig):
@@ -18,38 +65,7 @@ class Config(metaclass=MetaConfig):
     secret: str
     token: str
     refresh: str
-    validity: int
-    path = Path.home() / '.config/playlister/config.yaml'
-
-    def __init__(self, path: Path = None):
-        if path:
-            self.path = path
-        if not self.path.exists():
-            log.warning('No configuration available')
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-        else:
-            with open(self.path) as data:
-                self.data.update(load(data))
-
-    def __getattr__(self, attr):
-        try:
-            return self.data[attr]
-        except KeyError:
-            raise AttributeError(
-                f"'{attr}' is not a valid configuration parameter")
-
-    def __setattr__(self, key, value) -> None:
-        self.update(**{key: value})
-
-    def update(self, **kwargs):
-        for key, value in kwargs.items():
-            if key not in self.data:
-                raise AttributeError(
-                    f"'{key}' is not a valid configuration parameter")
-            self.data[key] = value
-        with open(self.path, 'w') as output:
-            log.info('Updating config')
-            dump(self.data, output, default_flow_style=False)
+    validity: float
 
 
 def arguments() -> Namespace:
@@ -70,6 +86,5 @@ def init():
     pass
 
 
-config = None
 log = getLogger('playlister')
 logging()

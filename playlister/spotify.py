@@ -1,6 +1,6 @@
 import webbrowser
 from time import time
-from json import loads, dumps
+from json import loads
 from typing import List, Dict, Any
 from base64 import b64encode
 from certifi import where
@@ -16,38 +16,10 @@ class Spotify:
     api_url = 'https://api.spotify.com/v1'
     redirect_uri = 'http://localhost:8888'
 
-    def __init__(self, config: Config):
-        if not (config.client and config.secret):
+    def __init__(self):
+        if not (Config.client and Config.secret):
             raise Exception('Missing Spotify client credentials')
-        self.config = config
         self.client = PoolManager(ca_certs=where())
-
-    def post(self,
-             url: str,
-             body: dict,
-             headers: dict = None,
-             encode: bool = False) -> dict:
-        log.debug(f'POST {self.accounts_url + url}')
-        if encode:
-            response = self.client.request_encode_body(
-                'POST',
-                self.accounts_url + url,
-                fields=body,
-                encode_multipart=False)
-        else:
-            response = self.client.request(
-                'POST',
-                self.accounts_url + url,
-                headers=headers,
-                body=dumps(body))
-        if response.status != 200:
-            raise ConnectionError(
-                f'Failed with code {response.status}: {response.reason}')
-        return loads(response.data)
-
-    def get(self, url: str, headers: dict) -> dict:
-        response = self.client.request('GET', self.api_url + url)
-        return {}
 
     def response(self, response: HTTPResponse) -> Dict[str, Any]:
         if response.status != 200:
@@ -57,15 +29,15 @@ class Spotify:
 
     @property
     def token(self) -> str:
-        if not self.config.token:
+        if not Config.token:
             self.authorize()
-        elif self.config.validity < time():
+        elif Config.validity < time():
             self.refresh()
-        return self.config.token
+        return Config.token
 
     def authorize(self) -> None:
         payload = {
-            'client_id': self.config.client,
+            'client_id': Config.client,
             'response_type': 'code',
             'redirect_uri': self.redirect_uri,
             'scope': 'playlist-modify-public',
@@ -80,8 +52,8 @@ class Spotify:
             'code': code,
             'redirect_uri': self.redirect_uri,
             'grant_type': 'authorization_code',
-            'client_id': self.config.client,
-            'client_secret': self.config.secret,
+            'client_id': Config.client,
+            'client_secret': Config.secret,
         }
         log.info('Authenticating client')
         response = self.client.request_encode_body(
@@ -90,7 +62,7 @@ class Spotify:
             fields=payload,
             encode_multipart=False)
         data = self.response(response)
-        self.config.update(
+        Config.update(
             token=data['access_token'],
             validity=time() + data['expires_in'],
             refresh=data['refresh_token'])
@@ -100,7 +72,7 @@ class Spotify:
             'refresh_token': self.token.refresh,
             'grant_type': 'refresh_token'
         }
-        keys = f"{self.config.client}:{self.config.secret}"
+        keys = f"{Config.client}:{Config.secret}"
         encoded_keys = b64encode(keys.encode("ascii")).decode("ascii")
         headers = {'Authorization': f'Basic {encoded_keys}'}
         log.info('Refreshing token')
@@ -111,7 +83,7 @@ class Spotify:
             headers=headers,
             encode_multipart=False)
         data = self.response(response)
-        self.config.update(
+        Config.update(
             token=data['access_token'], validity=time() + data['expires_in'])
 
     def search(self, artist: str, title: str):
@@ -126,7 +98,6 @@ class Spotify:
         response = self.client.request(
             'GET', f"{self.api_url}/search?{query}", headers=headers)
         data = self.response(response)
-        breakpoint()
         if data['items']:
             # track = Track(**data['items'])
             log.debug(f"Track found")

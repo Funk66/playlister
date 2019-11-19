@@ -1,10 +1,10 @@
-from . import Config, spotify
+from . import Config
+from .spotify import Spotify
 
 
-def setup():
-    config = Config()
-    if not (config.client and config.secret):
-        client = input('Client id: ')
-        secret = input('Client secret: ')
-        config.update(client=client, secret=secret)
-    spotify.setup(config)
+if not (Config.client and Config.secret):
+    client = input('Client id: ')
+    secret = input('Client secret: ')
+    Config.update(client=client, secret=secret)
+spotify = Spotify()
+spotify.search('sting', 'breath')

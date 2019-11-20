@@ -2,7 +2,7 @@ from csv import reader, writer
 from typing import Iterable, Dict, List, Optional
 
 from . import Config, log
-from .entities import Track
+from .entities import Track, TrackId
 
 
 class TableError(Exception):
@@ -12,25 +12,25 @@ class TableError(Exception):
 class Table:
     instance: Optional['Table'] = None
     columns: List[str] = [
-        'id', 'title', 'artist', 'spotify.id', 'spotify.title',
-        'spotify.artist', 'spotify.album', 'active'
+        'artist', 'title', 'spotify.id', 'spotify.artist',
+        'spotify.title', 'spotify.album', 'active', 'timeline'
     ]
 
-    def __new__(cls, name, bases, namespace):
+    def __new__(cls):
         if cls.instance:
             return cls.instance
-        instance = super().__new__(cls, name, bases, namespace)
+        instance = super().__new__(cls)
         cls.instance = instance
         return instance
 
     def __init__(self):
-        self.index: Dict[int, Track] = {}
+        self.index: Dict[TrackId, Track] = {}
         self.tracks: List[Track] = []
         self.path = Config.path.parent / 'data.csv'
         if self.path.exists():
             self.read()
 
-    def __getitem__(self, track_id: int) -> Track:
+    def __getitem__(self, track_id: TrackId) -> Track:
         try:
             return self.index[track_id]
         except KeyError:
@@ -48,21 +48,21 @@ class Table:
     def add(self, track: Track) -> None:
         if not isinstance(track, Track):
             raise ValueError(f"Cannot add a {type(track)} to the table")
-        if track in self:
+        if track not in self:
             self.tracks.append(track)
             self.index[track.id] = track
 
     def read(self):
         log.info('Reading track table')
-        with open(self.path) as data:
-            self.tracks = data.readlines()
+        # with open(self.path) as data:
+            # self.tracks = data.readlines()[1:]
 
     def write(self):
         log.info('Writing track table')
         rows = [
-            getattr(track, column)
+            [getattr(track, column) for column in self.columns]
             for track in self.tracks
-            for column in self.columns
         ]
-        with open(self.path, 'w') as output:
-            writer(output, [self.columns] + rows)
+        with open(self.path, 'w', newline='') as output:
+            csv = writer(output)
+            csv.writerows([self.columns] + rows)

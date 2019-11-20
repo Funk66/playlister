@@ -1,7 +1,7 @@
 from yaml import load, dump
 from datetime import date
 from logging import getLogger, basicConfig
-from pathlib import Path
+from pathlib import Path, PosixPath
 from typing import Any, Dict
 from argparse import ArgumentParser, Namespace
 
@@ -20,7 +20,6 @@ class MetaConfig(type):
         meta = {
             'data': dict(zip(fields, [''] * len(fields))),
             'loaded': False,
-            'path': Path.home() / '.config/playlister/config.yaml',
         }
         return super().__new__(mcs, name, bases, {
             **namespace, '__meta__': meta
@@ -37,17 +36,16 @@ class MetaConfig(type):
         self.update(**{name: value})
 
     def load(self) -> None:
-        if self.__meta__['path'].exists():
-            with open(self.__meta__['path']) as data:
+        if self.path.exists():
+            with open(self.path) as data:
                 log.info('Reading config file')
                 self.__meta__['data'].update(load(data))
         self.__meta__['loaded'] = True
 
     def write(self) -> None:
-        path = self.__meta__['path']
-        if not path.parent.exists():
-            path.parent.mkdir(parents=True)
-        with open(path, 'w') as output:
+        if not self.path.parent.exists():
+            self.path.parent.mkdir(parents=True)
+        with open(self.path, 'w') as output:
             log.info('Writing config file')
             dump(self.__meta__['data'], output, default_flow_style=False)
 
@@ -68,6 +66,7 @@ class Config(metaclass=MetaConfig):
     refresh: str
     validity: float
     playlists: Dict[str, str]
+    path = Path.home() / '.config/playlister/config.yaml'
 
 
 def arguments() -> Namespace:

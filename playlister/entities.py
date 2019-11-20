@@ -1,11 +1,12 @@
-from html.parser import unescape
 from datetime import date
-from hashlib import md5
 from re import sub, IGNORECASE
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Tuple
 from dataclasses import dataclass
 
 from . import today
+
+
+TrackId = Tuple[str, str]
 
 
 @dataclass
@@ -16,6 +17,21 @@ class SpotifyTrack:
     album: str
 
 
+# class Timeline(list):
+    # def append(self, day):
+        # if not isinstance(day, date):
+            # raise ValueError(f"Cannot add type {type(day)} to timeline")
+        # last_date = self[-1]
+        # if day < last_date:
+            # log.warning(f"Not adding older dates to the timeline: {day}")
+        # elif day != last_date:
+            # super().append(day)
+
+    # @property
+    # def last(self) -> date:
+        # return self[-1]
+
+
 class Track:
     def __init__(self, artist: str, title: str):
         self.title = title
@@ -23,10 +39,6 @@ class Track:
         self.active = False
         self.timeline: List[date] = [today]
         self.spotify: Optional[SpotifyTrack] = None
-
-    def __hash__(self) -> int:
-        return int(
-            md5(bytes(self.artist + self.title, 'utf8')).hexdigest(), 16)
 
     def __repr__(self) -> str:
         return f'Track(artist={self.artist}, title={self.title})'
@@ -43,13 +55,13 @@ class Track:
         obj = self
         for attr in name.split('.'):
             obj = getattr(obj, attr)
+            if not obj:
+                return ''
         return obj
 
     @property
-    def id(self) -> int:
-        if not hasattr(self, '__id__'):
-            self.__id__ = hash(self)
-        return self.__id__
+    def id(self) -> TrackId:
+        return (self.artist, self.title)
 
     @property
     def simplified_title(self) -> str:
@@ -61,12 +73,13 @@ class Track:
 
     @staticmethod
     def sanitize(line: str) -> str:
-        line = unescape(line)
         line = sub(r'\(.*?\)', ' ', line)
         line = sub('".*?"', ' ', line)
         line = sub('[/\\-]', ' ', line)
         line = sub(r'[^\w\']', ' ', line)
         line = sub(' and ', ' ', line, flags=IGNORECASE)
+        # line = sub(r'\W', ' ', line)
+        # line = sub(r' \w ', ' ', line)
         line = sub(r'\s+', ' ', line)
         return line.split(' feat. ', 1)[0].strip()
 

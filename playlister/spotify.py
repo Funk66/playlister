@@ -80,7 +80,7 @@ class Spotify:
 
     def refresh(self):
         payload = {
-            'refresh_token': self.token.refresh,
+            'refresh_token': Config.refresh,
             'grant_type': 'refresh_token'
         }
         keys = f"{Config.client}:{Config.secret}"
@@ -115,7 +115,7 @@ class Spotify:
             track = tracks[0]
             return SpotifyTrack(track['id'], track['name'],
                                 track['artists'][0]['name'],
-                                track['album'])
+                                track['album']['name'])
         log.info("Track not found")
         return None
 

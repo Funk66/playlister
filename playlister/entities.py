@@ -2,11 +2,10 @@ from html.parser import unescape
 from datetime import date
 from hashlib import md5
 from re import sub, IGNORECASE
-from typing import Optional, List
+from typing import Optional, List, Any
 from dataclasses import dataclass
 
 from . import today
-from .data import Table
 
 
 @dataclass
@@ -18,24 +17,12 @@ class SpotifyTrack:
 
 
 class Track:
-    title: str
-    artist: str
-    spotify: Optional[SpotifyTrack]
-    timeline: List[date]
-    active: bool = False
-
-    def __new__(self, name, bases, namespace) -> 'Track':
-        table = Table()
-        track_id = 0
-        if track_id in table:
-            return table[track_id]
-        return super().__new__(name, bases, namespace)
-
     def __init__(self, artist: str, title: str):
         self.title = title
         self.artist = artist
-        self.timeline = [today]
         self.active = False
+        self.timeline: List[date] = [today]
+        self.spotify: Optional[SpotifyTrack] = None
 
     def __hash__(self) -> int:
         return int(
@@ -46,6 +33,17 @@ class Track:
 
     def __str__(self) -> str:
         return f'{self.artist} - {self.title}'
+
+    def __eq__(self, obj) -> bool:
+        if hasattr(obj, 'id'):
+            return self.id == obj.id
+        return False
+
+    def __getattr__(self, name: str) -> Any:
+        obj = self
+        for attr in name.split('.'):
+            obj = getattr(obj, attr)
+        return obj
 
     @property
     def id(self) -> int:

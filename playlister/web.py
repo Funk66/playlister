@@ -27,6 +27,7 @@ def update(self, channel: Channel):
     for artist, title in zip(artists, titles):
         track = Track(artist=artist, title=title)
         if track in table:
+            track = table[track.id]
             track.played()
         else:
             track.spotify = spotify.search(track.simplified_artist,

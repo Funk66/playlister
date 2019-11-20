@@ -1,6 +1,5 @@
-from re import findall
-from urllib3 import HTTPConnectionPool
-from typing import Iterable, Dict, List
+from csv import reader, writer
+from typing import Iterable, Dict, List, Optional
 
 from . import Config, log
 from .entities import Track
@@ -11,13 +10,17 @@ class TableError(Exception):
 
 
 class Table:
-    __instance__ = None
+    instance: Optional['Table'] = None
+    columns: List[str] = [
+        'id', 'title', 'artist', 'spotify.id', 'spotify.title',
+        'spotify.artist', 'spotify.album', 'active'
+    ]
 
     def __new__(cls, name, bases, namespace):
-        if cls.__instance__:
-            return cls.__instance__
+        if cls.instance:
+            return cls.instance
         instance = super().__new__(cls, name, bases, namespace)
-        cls.__instance__ = instance
+        cls.instance = instance
         return instance
 
     def __init__(self):
@@ -42,32 +45,24 @@ class Table:
     def __len__(self):
         return len(self.tracks)
 
+    def add(self, track: Track) -> None:
+        if not isinstance(track, Track):
+            raise ValueError(f"Cannot add a {type(track)} to the table")
+        if track in self:
+            self.tracks.append(track)
+            self.index[track.id] = track
+
     def read(self):
+        log.info('Reading track table')
         with open(self.path) as data:
             self.tracks = data.readlines()
 
     def write(self):
+        log.info('Writing track table')
+        rows = [
+            getattr(track, column)
+            for track in self.tracks
+            for column in self.columns
+        ]
         with open(self.path, 'w') as output:
-            output.write(self.tracks)
-
-    def add(self, track: Track):
-        if track not in self:
-            self.tracks.append(track)
-            self.index[track.id] = track
-
-
-class TrackTable:
-    columns = [
-        'id', 'title', 'artist', 'spotify.id', 'spotify.title',
-        'spotify.artist', 'spotify.album', 'active'
-    ]
-
-    def write(self):
-        pass
-
-    def read(self):
-        pass
-
-
-class TimelineTable:
-    columns = ['track', 'date']
+            writer(output, [self.columns] + rows)

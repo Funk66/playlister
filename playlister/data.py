@@ -1,8 +1,9 @@
+from datetime import date
 from csv import reader, writer
 from typing import Iterable, Dict, List, Optional
 
 from . import Config, log
-from .entities import Track, TrackId
+from .entities import Track, TrackId, SpotifyTrack
 
 
 class TableError(Exception):
@@ -11,10 +12,6 @@ class TableError(Exception):
 
 class Table:
     instance: Optional['Table'] = None
-    columns: List[str] = [
-        'artist', 'title', 'spotify.id', 'spotify.artist',
-        'spotify.title', 'spotify.album', 'active', 'timeline'
-    ]
 
     def __new__(cls):
         if cls.instance:
@@ -54,15 +51,25 @@ class Table:
 
     def read(self):
         log.info('Reading track table')
-        # with open(self.path) as data:
-            # self.tracks = data.readlines()[1:]
+        with open(self.path) as tracks:
+            for track in reader(tracks):
+                artist, title, *spotify, timeline = track
+                timeline = [date.fromisoformat(d) for d in timeline.split()]
+                self.tracks.append(
+                    Track(
+                        artist=artist,
+                        title=title,
+                        spotify=SpotifyTrack(*spotify),
+                        timeline=timeline))
 
     def write(self):
         log.info('Writing track table')
-        rows = [
-            [getattr(track, column) for column in self.columns]
-            for track in self.tracks
-        ]
+        spotify_attrs = SpotifyTrack.__annotations__.keys()
+        rows = []
+        for track in self.tracks:
+            spotify = ([getattr(track.spotify, attr) for attr in spotify_attrs]
+                       if track.spotify else [''] * len(spotify_attrs))
+            timeline = ' '.join([str(day) for day in track.timeline])
+            rows.append([track.artist, track.title, *spotify, timeline])
         with open(self.path, 'w', newline='') as output:
-            csv = writer(output)
-            csv.writerows([self.columns] + rows)
+            writer(output).writerows(rows)

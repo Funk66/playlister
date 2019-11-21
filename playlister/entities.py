@@ -1,44 +1,31 @@
 from datetime import date
 from re import sub, IGNORECASE
-from typing import Optional, List, Any, Tuple
+from typing import Optional, List, Tuple
 from dataclasses import dataclass
 
 from . import today
-
 
 TrackId = Tuple[str, str]
 
 
 @dataclass
 class SpotifyTrack:
-    id: str
-    title: str
     artist: str
+    title: str
     album: str
-
-
-# class Timeline(list):
-    # def append(self, day):
-        # if not isinstance(day, date):
-            # raise ValueError(f"Cannot add type {type(day)} to timeline")
-        # last_date = self[-1]
-        # if day < last_date:
-            # log.warning(f"Not adding older dates to the timeline: {day}")
-        # elif day != last_date:
-            # super().append(day)
-
-    # @property
-    # def last(self) -> date:
-        # return self[-1]
+    uri: str
 
 
 class Track:
-    def __init__(self, artist: str, title: str):
-        self.title = title
+    def __init__(self,
+                 artist: str,
+                 title: str,
+                 spotify: Optional[SpotifyTrack] = None,
+                 timeline: Optional[List[date]] = None):
         self.artist = artist
-        self.active = False
-        self.timeline: List[date] = [today]
-        self.spotify: Optional[SpotifyTrack] = None
+        self.title = title
+        self.timeline = timeline or []
+        self.spotify: Optional[SpotifyTrack] = spotify
 
     def __repr__(self) -> str:
         return f'Track(artist={self.artist}, title={self.title})'
@@ -50,14 +37,6 @@ class Track:
         if hasattr(obj, 'id'):
             return self.id == obj.id
         return False
-
-    def __getattr__(self, name: str) -> Any:
-        obj = self
-        for attr in name.split('.'):
-            obj = getattr(obj, attr)
-            if not obj:
-                return ''
-        return obj
 
     @property
     def id(self) -> TrackId:
@@ -78,11 +57,13 @@ class Track:
         line = sub('[/\\-]', ' ', line)
         line = sub(r'[^\w\']', ' ', line)
         line = sub(' and ', ' ', line, flags=IGNORECASE)
-        # line = sub(r'\W', ' ', line)
-        # line = sub(r' \w ', ' ', line)
         line = sub(r'\s+', ' ', line)
         return line.split(' feat. ', 1)[0].strip()
 
-    def played(self):
-        if self.timeline[-1] != today:
-            self.timeline.append(today)
+    def played(self, date: date = today):
+        if not self.timeline:
+            self.timeline.append(date)
+        elif date not in self.timeline:
+            for index, day in enumerate(reversed(self.timeline)):
+                if day < date:
+                    self.timeline.insert(-index or len(self.timeline), date)

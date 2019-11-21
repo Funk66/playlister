@@ -105,18 +105,18 @@ class Spotify:
         }
         headers = {'Authorization': f"Bearer {self.token}"}
         query = urlencode(params, quote_via=quote).replace('%3A', ':')
-        log.info(f"Searching for {artist} - {title}")
+        log.debug(f"Searching for {query}")
         response = self.client.request(
             'GET', f"{self.api_url}/search?{query}", headers=headers)
         data = self.response(response)
         tracks = data['tracks']['items']
         if tracks:
-            log.info(f"Track found")
+            log.info(f"{green_checkmark} {artist} - {title}")
             track = tracks[0]
             return SpotifyTrack(track['id'], track['name'],
                                 track['artists'][0]['name'],
                                 track['album']['name'])
-        log.info("Track not found")
+        log.info(f"{red_cross} {artist} - {title}")
         return None
 
     def add(self, tracks: list) -> None:
@@ -142,3 +142,7 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-type", 'text/html')
         self.end_headers()
         Thread(target=shutdown, args=(self.server, )).start()
+
+
+green_checkmark = '\033[92m\u2713\033[0m'
+red_cross = '\033[91m\u2717\033[0m'

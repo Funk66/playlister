@@ -22,7 +22,8 @@ def update(channel: Channel, date: date = today):
     log.info('Downloading playlist')
     url = connection_from_url(f'http://www.radioswiss{channel.name}.ch')
     page = url.request(
-        'GET', f'/en/music-programme/search/{date.year}{date.month}{date.day}')
+        'GET',
+        f'/en/music-programme/search/{date.year}{date.month:02}{date.day:02}')
     html = unescape(page.data.decode())
     regex = r'<span class="{}">\n\s+([\W\w\s]*?){}\n\s+</span>'
     artists = findall(regex.format('artist', ''), html)
@@ -31,10 +32,10 @@ def update(channel: Channel, date: date = today):
         track = Track(artist=artist, title=title)
         if track in table:
             track = table[track.id]
-            track.played()
         else:
             track.spotify = spotify.search(track.simplified_artist,
                                            track.simplified_title)
             table.add(track)
+        track.played(date)
     log.info(f"Got {len(table) - total} new tracks")
     table.write()

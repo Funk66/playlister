@@ -1,64 +1,58 @@
-import logging
-from urllib3 import PoolManager
-from re import findall
+from logging import basicConfig
+from datetime import date, timedelta
+from argparse import ArgumentParser, Namespace
 
-from .entities import Track
-
-
-class ParserError(Exception):
-    pass
+from . import Config, today, log
+from .web import update, Channel
+from .stats import Strategy
 
 
-TODAY = datetime.today()
+def arguments() -> Namespace:
+    parser = ArgumentParser(
+        prog='Playlister',
+        description='Create Spotify playlists from internet radio channels')
+    parser.add_argument('-v', help='Verbose logging', dest='debug')
+    subparser = parser.add_subparsers(required=True, dest='command')
+    download_parser = subparser.add_parser(
+        'download', help='Get playlist from the website')
+    download_parser.add_argument(
+        '-d',
+        '--date',
+        help='Date of the broadcast in ISO format',
+        default=str(today))
+    download_parser.add_argument(
+        '-c',
+        '--channel',
+        help='Radio channel',
+        required=True,
+        type=Channel)
+    sync_parser = subparser.add_parser(
+        'sync', help='Recalculate and update the Spotify playlist')
+    sync_parser.add_argument(
+        '-s',
+        '--strategy',
+        help='Selection model for the new playlist',
+        type=Strategy)
+    return parser.parse_args()
 
 
-class DB:
-    def __init__(self):
-        # load csv
-        self.data = None
-
-    def add(self, artist, title, played: bool = True):
-        track_id = (artist, title)
-        if track_id in self.data:
-            track = self.data[track_id]
-        else:
-            track = Track(artist, title, track_id)
-        if played and not track.timeline.today:
-            track.timeline.played()
-
-    def playlist(self):
-        pass
-
-
-class Timeline(list):
-    """ Ordered list """
-    def __init__(self, data):
-        self.data = sorted(data)
-
-    def add(self, date):
-        if date <= self.data[-1]:
-            raise ValueError()
-        self.data.append(date)
-
-
-def load():
-    return
-
-
-def download():
-    # page = PoolManager().request('GET',
-    # 'http://www.radioswissjazz.ch/en/music-programme/search')
-    # html = page.data.decode()
-    with open('page.html') as p:
-        html = ''.join(p.readlines())
-    regex = r'<span class="{}">([\W\w\s]*?)</span>'
-    artists = findall(regex.format("artist"), html)
-    titles = findall(regex.format("titletag"), html)
-    return zip(artists, titles)
-
-
-def update():
-    logging.info('Fetching page')
-    for artist, title in download():
-        db.add(artist, title)
-    # return [Track(artists[i].strip(), titles[i]) for i in range(len(artists))]
+def run() -> None:
+    args = arguments()
+    basicConfig(level=10 if args.debug else 20, format='%(message)s')
+    if not (Config.client and Config.secret):
+        client = input('Client id: ')
+        secret = input('Client secret: ')
+        Config.update(client=client, secret=secret)
+    if args.command == 'sync':
+        if not (Config.channel[args.channel]):
+            Config.channel.update({args.channel: input('Playlist URI: ')})
+        # sync(args.strategy)
+    else:
+        if args.date:
+            try:
+                args.date = date.fromisoformat(args.date)
+            except ValueError:
+                return log.error(f"{args.date} is not a valid date")
+            if args.date < today - timedelta(days=30) or args.date > today:
+                return log.error("Date out of range")
+        update(args.channel, args.date or today)

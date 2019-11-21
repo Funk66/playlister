@@ -1,9 +1,8 @@
 from yaml import load, dump
 from datetime import date
-from logging import getLogger, basicConfig
-from pathlib import Path, PosixPath
+from logging import getLogger
+from pathlib import Path
 from typing import Any, Dict
-from argparse import ArgumentParser, Namespace
 
 
 class ConfigError(Exception):
@@ -69,24 +68,5 @@ class Config(metaclass=MetaConfig):
     path = Path.home() / '.config/playlister/config.yaml'
 
 
-def arguments() -> Namespace:
-    parser = ArgumentParser(description='')
-    parser.add_argument('-t', '--token', help='Token')
-    parser.add_argument('-c', '--client', help='Client id')
-    parser.add_argument('-s', '--secret', help='Client secret')
-    parser.add_argument('-r', '--redirect', help='Redirect URL')
-    parser.add_argument('-p', '--path', help='Path to the config file')
-    return parser.parse_args()
-
-
-def logging():
-    basicConfig(level=20, format='%(message)s')
-
-
-def init():
-    pass
-
-
 log = getLogger('playlister')
 today = date.today()
-logging()

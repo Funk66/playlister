@@ -1,7 +1,7 @@
 import webbrowser
 from time import time
-from json import loads
-from typing import List, Dict, Any, Optional, TYPE_CHECKING
+from json import loads, dumps
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
 from base64 import b64encode
 from certifi import where
 from urllib3 import PoolManager
@@ -10,12 +10,24 @@ from urllib.parse import urlencode, quote
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
+from dataclasses import dataclass
 
 from . import Config, log
-from .entities import SpotifyTrack
 
 if TYPE_CHECKING:
     from socketserver import BaseServer
+
+
+class SpotifyError(Exception):
+    pass
+
+
+@dataclass
+class SpotifyTrack:
+    artist: str
+    title: str
+    album: str
+    uri: str
 
 
 class Spotify:
@@ -28,9 +40,10 @@ class Spotify:
             raise Exception('Missing Spotify client credentials')
         self.client = PoolManager(ca_certs=where())
 
-    def response(self, response: HTTPResponse) -> Dict[str, Any]:
-        if response.status != 200:
-            raise ConnectionError(
+    def response(self, response: HTTPResponse,
+                 success_code: int = 200) -> Dict[str, Any]:
+        if response.status != success_code:
+            raise SpotifyError(
                 f'Failed with code {response.status}: {response.reason}')
         return loads(response.data)
 
@@ -111,22 +124,24 @@ class Spotify:
         data = self.response(response)
         tracks = data['tracks']['items']
         if tracks:
-            log.info(f"{green_checkmark} {artist} - {title}")
             track = tracks[0]
-            return SpotifyTrack(track['id'], track['name'],
-                                track['artists'][0]['name'],
-                                track['album']['name'])
-        log.info(f"{red_cross} {artist} - {title}")
+            return SpotifyTrack(
+                uri=track['id'],
+                title=track['name'],
+                artist=track['artists'][0]['name'],
+                album=track['album']['name'])
         return None
 
-    def add(self, tracks: list) -> None:
-        self.client.request('POST', '')
-
-    def reorder(self, number, range) -> None:
-        self.client.request('PUT', '')
-
-    def remove(self, tracks) -> None:
-        self.client.request('DELETE', '')
+    def replace(self, playlist: str, tracks: List[SpotifyTrack]) -> None:
+        headers = {
+            'Authorization': f"Bearer {self.token}",
+            'Content-Type': 'application/json'
+        }
+        url = self.api_url + f'/playlists/{playlist}/tracks'
+        body = {'uris': [f"spotify:track:{track.uri}" for track in tracks]}
+        response = self.client.request(
+            'PUT', url, headers=headers, body=dumps(body))
+        self.response(response, 201)
 
 
 class HTTPRequestHandler(BaseHTTPRequestHandler):
@@ -142,7 +157,3 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-type", 'text/html')
         self.end_headers()
         Thread(target=shutdown, args=(self.server, )).start()
-
-
-green_checkmark = '\033[92m\u2713\033[0m'
-red_cross = '\033[91m\u2717\033[0m'

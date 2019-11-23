@@ -1,5 +1,5 @@
+from enum import Enum
 from yaml import load, dump
-from datetime import date
 from logging import getLogger
 from pathlib import Path
 from typing import Any, Dict
@@ -68,5 +68,9 @@ class Config(metaclass=MetaConfig):
     path = Path.home() / '.config/playlister/config.yaml'
 
 
+class Channel(Enum):
+    jazz = 'jazz'
+    pop = 'pop'
+
+
 log = getLogger('playlister')
-today = date.today()

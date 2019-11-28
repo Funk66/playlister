@@ -46,13 +46,14 @@ class Track:
 
     @staticmethod
     def sanitize(line: str) -> str:
+        line = sub(r'\.', '', line)
         line = sub(r'\(.*?\)', ' ', line)
         line = sub('".*?"', ' ', line)
         line = sub('[/\\-]', ' ', line)
         line = sub(r'[^\w\']', ' ', line)
         line = sub(' and ', ' ', line, flags=IGNORECASE)
         line = sub(r'\s+', ' ', line)
-        return line.split(' feat. ', 1)[0].strip()
+        return line.split(' feat ', 1)[0].strip()
 
     def played(self, date: date = date.today()):
         if not self.timeline:

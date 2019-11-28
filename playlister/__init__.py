@@ -69,8 +69,9 @@ class Config(metaclass=MetaConfig):
 
 
 class Channel(Enum):
-    jazz = 'jazz'
     pop = 'pop'
+    jazz = 'jazz'
+    classic = 'classic'
 
 
 log = getLogger('playlister')

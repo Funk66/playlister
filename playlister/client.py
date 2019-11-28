@@ -22,7 +22,7 @@ def arguments() -> Namespace:
         description='Create Spotify playlists from internet radio channels')
     parser.add_argument('-v', help='Verbose logging', dest='debug')
     parser.add_argument(
-        '-c', '--channel', help='Radio channel', required=True, type=Channel)
+        '-c', nargs='+', help='Radio channels', type=Channel, dest='channel')
     return parser.parse_args()
 
 
@@ -63,21 +63,22 @@ def run() -> None:
         client = input('Client id: ')
         secret = input('Client secret: ')
         Config.update(client=client, secret=secret)
-    if args.channel.name not in Config.playlists:
-        Config.playlists.update({args.channel: input('Playlist URI: ')})
-    table = Table(args.channel)
-    spotify = Spotify()
-    limit_date = today - timedelta(days=30)
-    day = max(limit_date, table.last_date + timedelta(days=1))
-    while day <= today:
-        download(table, spotify, args.channel, day)
-        day += timedelta(days=1)
-    total = 0
-    selection = []
-    for track in table.tracks:
-        if track.spotify:
-            selection.append(track.spotify)
-            total += 1
-            if total == 100:
-                break
-    spotify.replace(Config.playlists[args.channel.name], selection)
+    for channel in (args.channel or Channel):
+        if channel.name not in Config.playlists:
+            Config.playlists.update({args.channel: input('Playlist URI: ')})
+        table = Table(channel)
+        spotify = Spotify()
+        limit_date = today - timedelta(days=30)
+        day = max(limit_date, table.last_date + timedelta(days=1))
+        while day <= today:
+            download(table, spotify, channel, day)
+            day += timedelta(days=1)
+        total = 0
+        selection = []
+        for track in table.tracks:
+            if track.spotify:
+                selection.append(track.spotify)
+                total += 1
+                if total == 100:
+                    break
+        spotify.replace(Config.playlists[channel.name], selection)

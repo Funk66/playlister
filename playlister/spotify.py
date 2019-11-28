@@ -43,8 +43,8 @@ class Spotify:
     def response(self, response: HTTPResponse,
                  success_code: int = 200) -> Dict[str, Any]:
         if response.status != success_code:
-            raise SpotifyError(
-                f'Failed with code {response.status}: {response.reason}')
+            raise SpotifyError(f'Failed with code {response.status}: '
+                               f'{response.reason} ({response.data})')
         return loads(response.data)
 
     @property

@@ -1,16 +1,17 @@
 import webbrowser
-from time import time
-from json import loads, dumps
-from typing import Dict, Any, List, Optional, TYPE_CHECKING
 from base64 import b64encode
+from dataclasses import dataclass
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from json import dumps, loads
+from threading import Thread
+from time import time
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from urllib.parse import quote, urlencode
+
 from certifi import where
 from urllib3 import PoolManager
 from urllib3.response import HTTPResponse
-from urllib.parse import urlencode, quote
-from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from threading import Thread
-from dataclasses import dataclass
 
 from . import Config, log
 

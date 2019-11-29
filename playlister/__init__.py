@@ -1,8 +1,9 @@
 from enum import Enum
-from yaml import load, dump
 from logging import getLogger
 from pathlib import Path
 from typing import Any, Dict
+
+from yaml import dump, load
 
 
 class ConfigError(Exception):

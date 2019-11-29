@@ -1,14 +1,14 @@
+from argparse import ArgumentParser, Namespace
+from datetime import date, timedelta
 from html.parser import unescape
 from logging import basicConfig
-from datetime import date, timedelta
-from argparse import ArgumentParser, Namespace
-from urllib3 import connection_from_url
 from re import findall
 
-from . import Config, Channel, log
-from .spotify import Spotify
-from .tracks import Track, Table
+from urllib3 import connection_from_url
 
+from . import Channel, Config, log
+from .spotify import Spotify
+from .tracks import Table, Track
 
 today = date.today()
 red_cross = '\033[91m\u2717\033[0m'

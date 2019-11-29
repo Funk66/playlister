@@ -1,11 +1,10 @@
-from re import sub, IGNORECASE
-from datetime import date
 from csv import reader, writer
-from typing import Iterable, Tuple, Dict, List, Optional
+from datetime import date
+from re import IGNORECASE, sub
+from typing import Dict, Iterable, List, Optional, Tuple
 
-from . import Config, Channel, log
+from . import Channel, Config, log
 from .spotify import SpotifyTrack
-
 
 TrackId = Tuple[str, str]
 

@@ -40,6 +40,8 @@ def download(table: Table,
     regex = r'<span class="{}">\n\s+([\W\w\s]*?){}\n\s+</span>'
     artists = findall(regex.format('artist', ''), html)
     titles = findall(regex.format('titletag', r'\s+'), html)
+    if channel is Channel.classic:
+        artists, titles = titles, artists
     for artist, title in zip(artists, titles):
         track = Track(artist=artist, title=title)
         if track in table:

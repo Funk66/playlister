@@ -1,3 +1,3 @@
 from . import client
 
-client.run()
+client.update()

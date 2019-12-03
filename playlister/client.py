@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from html.parser import unescape
 from logging import basicConfig
 from re import findall
+from subprocess import run
 
 from urllib3 import connection_from_url
 
@@ -29,7 +30,7 @@ def arguments() -> Namespace:
 def download(table: Table,
              spotify: Spotify,
              channel: Channel,
-             date: date = today):
+             date: date = today) -> None:
     total = len(table)
     log.info(f'Downloading playlist for {date}')
     url = connection_from_url(f'http://www.radioswiss{channel.name}.ch')
@@ -58,13 +59,24 @@ def download(table: Table,
     table.write()
 
 
-def run() -> None:
+def git(*command: str) -> None:
+    log.info(f"{command[0].title()}ing changes")
+    ps = run(["git", *command], cwd=Config.path.parent, capture_output=True)
+    output = ps.stdout.decode('utf8')
+    if ps.returncode != 0:
+        log.error(output)
+        exit()
+    log.debug(output)
+
+
+def update() -> None:
     args = arguments()
     basicConfig(level=10 if args.debug else 20, format='%(message)s')
     if not (Config.client and Config.secret):
         client = input('Client id: ')
         secret = input('Client secret: ')
         Config.update(client=client, secret=secret)
+    git('pull')
     for channel in (args.channel or Channel):
         if channel.name not in Config.playlists:
             Config.playlists.update({args.channel: input('Playlist URI: ')})
@@ -75,12 +87,6 @@ def run() -> None:
         while day <= today:
             download(table, spotify, channel, day)
             day += timedelta(days=1)
-        total = 0
-        selection = []
-        for track in table.tracks:
-            if track.spotify:
-                selection.append(track.spotify)
-                total += 1
-                if total == 100:
-                    break
-        spotify.replace(Config.playlists[channel.name], selection)
+        spotify.replace(Config.playlists[channel.name], table.selection())
+    git('commit', '-am', f"Seeding {today}")
+    git('push')

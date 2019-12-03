@@ -1,7 +1,8 @@
 from csv import reader, writer
+from collections import defaultdict
 from datetime import date
 from re import IGNORECASE, sub
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, Set, List, Optional, Tuple
 
 from . import Channel, Config, log
 from .spotify import SpotifyTrack
@@ -109,12 +110,12 @@ class Table:
             self.tracks.append(track)
             self.index[track.id] = track
 
-    def read(self):
+    def read(self) -> None:
         log.info('Reading track table')
         with open(self.path) as rows:
             for row in reader(rows):
-                artist, title, *spotify, timeline = row
-                timeline = [date.fromisoformat(d) for d in timeline.split()]
+                artist, title, *spotify, dates = row
+                timeline = [date.fromisoformat(d) for d in dates.split()]
                 track = Track(
                     artist=artist,
                     title=title,
@@ -123,7 +124,7 @@ class Table:
                 self.tracks.append(track)
                 self.index[track.id] = track
 
-    def write(self):
+    def write(self) -> None:
         log.info('Writing track table')
         spotify_attrs = SpotifyTrack.__annotations__
         rows = []
@@ -135,6 +136,19 @@ class Table:
             rows.append([track.artist, track.title, *spotify, timeline])
         with open(self.path, 'w', newline='') as output:
             writer(output).writerows(rows)
+
+    def selection(self, total: int = 100) -> List[SpotifyTrack]:
+        bucket: Dict[date, Set[SpotifyTrack]] = defaultdict(set)
+        selection: List[SpotifyTrack] = []
+        for track in self.tracks:
+            if track.spotify:
+                for day in track.timeline:
+                    bucket[day].add(track.spotify)
+        for day in reversed(sorted(bucket)):
+            selection += list(bucket[day])
+            if len(selection) > 100:
+                return selection[:100]
+        return selection
 
     @property
     def last_date(self) -> date:

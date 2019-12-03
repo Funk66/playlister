@@ -140,6 +140,7 @@ class Spotify:
         }
         url = self.api_url + f'/playlists/{playlist}/tracks'
         body = {'uris': [f"spotify:track:{track.uri}" for track in tracks]}
+        log.info('Updating playlist')
         response = self.client.request(
             'PUT', url, headers=headers, body=dumps(body))
         self.response(response, 201)

@@ -23,7 +23,7 @@ class SpotifyError(Exception):
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class SpotifyTrack:
     artist: str
     title: str

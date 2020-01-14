@@ -1,7 +1,8 @@
 from argparse import ArgumentParser, Namespace
 from datetime import date, timedelta
 from html.parser import unescape
-from logging import basicConfig
+from logging import DEBUG, INFO, basicConfig
+from random import shuffle
 from re import findall
 from subprocess import run
 
@@ -21,10 +22,29 @@ def arguments() -> Namespace:
     parser = ArgumentParser(
         prog='Playlister',
         description='Create Spotify playlists from internet radio channels')
-    parser.add_argument('-v', help='Verbose logging', dest='debug')
     parser.add_argument(
-        '-c', nargs='+', help='Radio channels', type=Channel, dest='channel')
+        '-v', help='Verbose logging', action='store_true', dest='verbose')
+    subparser = parser.add_subparsers(dest='command')
+    subparser.add_parser('update', description='Update playlists')
+    fix_command = subparser.add_parser(
+        'fix', description='Manually correlate Spotify tracks')
+    fix_command.add_argument('channel', help='Radio channel', type=Channel)
     return parser.parse_args()
+
+
+def update() -> None:
+    for channel in Channel:
+        if channel.name not in Config.playlists:
+            Config.playlists.update({channel.name: input('Playlist URI: ')})
+        table = Table(channel)
+        spotify = Spotify()
+        limit_date = today - timedelta(days=30)
+        day = max(limit_date, table.last_date + timedelta(days=1))
+        while day <= today:
+            download(table, spotify, channel, day)
+            day += timedelta(days=1)
+        spotify.replace(Config.playlists[channel.name], table.selection())
+    git('commit', '-am', f"Seeding {today}")
 
 
 def download(table: Table,
@@ -59,6 +79,35 @@ def download(table: Table,
     table.write()
 
 
+def fix(channel: Channel) -> None:
+    table = Table(channel)
+    spotify = Spotify()
+    unmatched = [track for track in table.tracks if not track.spotify]
+    shuffle(unmatched)
+    while unmatched:
+        track = unmatched.pop()
+        try:
+            print(f"{track.artist} - {track.title}")
+            artist = input('Artist: ')
+            title = input('Title: ')
+        except KeyboardInterrupt:
+            break
+        tracks = spotify.search(title=title, artist=artist, limit=5)
+        if not tracks:
+            print('No tracks found')
+            continue
+        for num, match in enumerate(tracks):
+            print(f"{num}. {match.artist} - {match.title}")
+        try:
+            selection = int(input('Selection: '))
+            track.spotify = tracks[selection]
+        except (ValueError, IndexError):
+            print('Invalid selection')
+            continue
+    table.write()
+    git('commit', '-am', f"Fixing tracks on the {channel.name} channel")
+
+
 def git(*command: str) -> None:
     log.info(f"{command[0].title()}ing changes")
     ps = run(["git", *command], cwd=Config.path.parent, capture_output=True)
@@ -69,24 +118,16 @@ def git(*command: str) -> None:
     log.debug(output)
 
 
-def update() -> None:
+def main() -> None:
     args = arguments()
-    basicConfig(level=10 if args.debug else 20, format='%(message)s')
+    basicConfig(level=DEBUG if args.verbose else INFO, format='%(message)s')
     if not (Config.client and Config.secret):
         client = input('Client id: ')
         secret = input('Client secret: ')
         Config.update(client=client, secret=secret)
     git('pull')
-    for channel in (args.channel or Channel):
-        if channel.name not in Config.playlists:
-            Config.playlists.update({args.channel: input('Playlist URI: ')})
-        table = Table(channel)
-        spotify = Spotify()
-        limit_date = today - timedelta(days=30)
-        day = max(limit_date, table.last_date + timedelta(days=1))
-        while day <= today:
-            download(table, spotify, channel, day)
-            day += timedelta(days=1)
-        spotify.replace(Config.playlists[channel.name], table.selection())
-    git('commit', '-am', f"Seeding {today}")
+    if args.command == 'update':
+        update()
+    elif args.command == 'fix':
+        fix(args.channel)
     git('push')

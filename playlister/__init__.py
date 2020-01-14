@@ -3,7 +3,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import Any, Dict
 
-from yaml import dump, load
+from yaml import dump, safe_load
 
 
 class ConfigError(Exception):
@@ -39,7 +39,7 @@ class MetaConfig(type):
         if self.path.exists():
             with open(self.path) as data:
                 log.info('Reading config file')
-                self.__meta__['data'].update(load(data))
+                self.__meta__['data'].update(safe_load(data))
         self.__meta__['loaded'] = True
 
     def write(self) -> None:

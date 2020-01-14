@@ -10,7 +10,8 @@ setup(
     url='https://github.com/Funk66/playlister',
     license='MIT',
     classifiers=['Programming Language :: Python :: 3.8'],
+    install_requires=['pyyaml', 'urllib3', 'certifi'],
     packages=['playlister'],
     entry_points={
-        'console_scripts': ['playlister=playlister.client:update']
+        'console_scripts': ['playlister=playlister.client:main']
     })

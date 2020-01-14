@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from json import dumps, loads
 from threading import Thread
 from time import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, overload
 from urllib.parse import quote, urlencode
 
 from certifi import where
@@ -111,11 +111,26 @@ class Spotify:
         Config.update(
             token=data['access_token'], validity=time() + data['expires_in'])
 
+    @overload
     def search(self, artist: str, title: str) -> Optional[SpotifyTrack]:
+        ...
+
+    @overload
+    def search(self, artist: str, title: str,
+               limit: int) -> Optional[List[SpotifyTrack]]:
+        ...
+
+    def search(self, artist: str, title: str, limit: int = 1
+               ):
+        q: List[str] = []
+        if artist:
+            q += [f"artist:{artist}"]
+        if title:
+            q += [f"track:{title}"]
         params = {
-            'limit': 1,
+            'limit': limit,
             'type': 'track',
-            'q': f'artist:{artist} track:{title}',
+            'q': ' '.join(q),
         }
         headers = {'Authorization': f"Bearer {self.token}"}
         query = urlencode(params, quote_via=quote).replace('%3A', ':')
@@ -123,14 +138,16 @@ class Spotify:
         response = self.client.request(
             'GET', f"{self.api_url}/search?{query}", headers=headers)
         data = self.response(response)
-        tracks = data['tracks']['items']
-        if tracks:
-            track = tracks[0]
-            return SpotifyTrack(
-                uri=track['id'],
-                title=track['name'],
-                artist=track['artists'][0]['name'],
-                album=track['album']['name'])
+        items = data['tracks']['items']
+        if items:
+            tracks = [
+                SpotifyTrack(
+                    uri=track['id'],
+                    title=track['name'],
+                    artist=track['artists'][0]['name'],
+                    album=track['album']['name']) for track in items
+            ]
+            return tracks[0] if limit == 1 else tracks
         return None
 
     def replace(self, playlist: str, tracks: List[SpotifyTrack]) -> None:

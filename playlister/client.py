@@ -126,7 +126,7 @@ def main() -> None:
         secret = input('Client secret: ')
         Config.update(client=client, secret=secret)
     git('pull')
-    if args.command == 'update':
+    if not args.command or args.command == 'update':
         update()
     elif args.command == 'fix':
         fix(args.channel)

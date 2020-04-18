@@ -13,29 +13,32 @@ from .spotify import Spotify
 from .tracks import Table, Track
 
 today = date.today()
-red_cross = '\033[91m\u2717\033[0m'
-blue_arrow = '\033[94m\u279a\033[0m'
-green_check = '\033[92m\u2713\033[0m'
+red_cross = "\033[91m\u2717\033[0m"
+blue_arrow = "\033[94m\u279a\033[0m"
+green_check = "\033[92m\u2713\033[0m"
 
 
 def arguments() -> Namespace:
     parser = ArgumentParser(
-        prog='Playlister',
-        description='Create Spotify playlists from internet radio channels')
+        prog="Playlister",
+        description="Create Spotify playlists from internet radio channels",
+    )
     parser.add_argument(
-        '-v', help='Verbose logging', action='store_true', dest='verbose')
-    subparser = parser.add_subparsers(dest='command')
-    subparser.add_parser('update', description='Update playlists')
+        "-v", help="Verbose logging", action="store_true", dest="verbose"
+    )
+    subparser = parser.add_subparsers(dest="command")
+    subparser.add_parser("update", description="Update playlists")
     fix_command = subparser.add_parser(
-        'fix', description='Manually correlate Spotify tracks')
-    fix_command.add_argument('channel', help='Radio channel', type=Channel)
+        "fix", description="Manually correlate Spotify tracks"
+    )
+    fix_command.add_argument("channel", help="Radio channel", type=Channel)
     return parser.parse_args()
 
 
 def update() -> None:
     for channel in Channel:
         if channel.name not in Config.playlists:
-            Config.playlists.update({channel.name: input('Playlist URI: ')})
+            Config.playlists.update({channel.name: input("Playlist URI: ")})
         table = Table(channel)
         spotify = Spotify()
         limit_date = today - timedelta(days=30)
@@ -44,23 +47,22 @@ def update() -> None:
             download(table, spotify, channel, day)
             day += timedelta(days=1)
         spotify.replace(Config.playlists[channel.name], table.selection())
-    git('commit', '-am', f"Seeding {today}")
+    git("commit", "-am", f"Seeding {today}")
 
 
-def download(table: Table,
-             spotify: Spotify,
-             channel: Channel,
-             date: date = today) -> None:
+def download(
+    table: Table, spotify: Spotify, channel: Channel, date: date = today
+) -> None:
     total = len(table)
-    log.info(f'Downloading playlist for {date}')
-    url = connection_from_url(f'http://www.radioswiss{channel.name}.ch')
+    log.info(f"Downloading playlist for {date}")
+    url = connection_from_url(f"http://www.radioswiss{channel.name}.ch")
     page = url.request(
-        'GET',
-        f'/en/music-programme/search/{date.year}{date.month:02}{date.day:02}')
+        "GET", f"/en/music-programme/search/{date.year}{date.month:02}{date.day:02}"
+    )
     html = unescape(page.data.decode())
     regex = r'<span class="{}">\n\s+([\W\w\s]*?){}\n\s+</span>'
-    artists = findall(regex.format('artist', ''), html)
-    titles = findall(regex.format('titletag', r'\s+'), html)
+    artists = findall(regex.format("artist", ""), html)
+    titles = findall(regex.format("titletag", r"\s+"), html)
     if channel is Channel.classic:
         artists, titles = titles, artists
     for artist, title in zip(artists, titles):
@@ -69,8 +71,9 @@ def download(table: Table,
             track = table[track.id]
             log.info(f"{blue_arrow} {track}")
         else:
-            track.spotify = spotify.search(track.simplified_artist,
-                                           track.simplified_title)
+            track.spotify = spotify.search(
+                track.simplified_artist, track.simplified_title
+            )
             icon = green_check if track.spotify else red_cross
             log.info(f"{icon} {track}")
             table.add(track)
@@ -88,30 +91,30 @@ def fix(channel: Channel) -> None:
         track = unmatched.pop()
         try:
             print(f"{track.artist} - {track.title}")
-            artist = input('Artist: ')
-            title = input('Title: ')
+            artist = input("Artist: ")
+            title = input("Title: ")
         except KeyboardInterrupt:
             break
         tracks = spotify.search(title=title, artist=artist, limit=5)
         if not tracks:
-            print('No tracks found')
+            print("No tracks found")
             continue
         for num, match in enumerate(tracks):
             print(f"{num}. {match.artist} - {match.title}")
         try:
-            selection = int(input('Selection: '))
+            selection = int(input("Selection: "))
             track.spotify = tracks[selection]
         except (ValueError, IndexError):
-            print('Invalid selection')
+            print("Invalid selection")
             continue
     table.write()
-    git('commit', '-am', f"Fixing tracks on the {channel.name} channel")
+    git("commit", "-am", f"Fixing tracks on the {channel.name} channel")
 
 
 def git(*command: str) -> None:
     log.info(f"{command[0].title()}ing changes")
     ps = run(["git", *command], cwd=Config.path.parent, capture_output=True)
-    output = ps.stdout.decode('utf8')
+    output = ps.stdout.decode("utf8")
     if ps.returncode != 0:
         log.error(output)
         exit()
@@ -120,14 +123,14 @@ def git(*command: str) -> None:
 
 def main() -> None:
     args = arguments()
-    basicConfig(level=DEBUG if args.verbose else INFO, format='%(message)s')
+    basicConfig(level=DEBUG if args.verbose else INFO, format="%(message)s")
     if not (Config.client and Config.secret):
-        client = input('Client id: ')
-        secret = input('Client secret: ')
+        client = input("Client id: ")
+        secret = input("Client secret: ")
         Config.update(client=client, secret=secret)
-    git('pull')
-    if not args.command or args.command == 'update':
+    git("pull")
+    if not args.command or args.command == "update":
         update()
-    elif args.command == 'fix':
+    elif args.command == "fix":
         fix(args.channel)
-    git('push')
+    git("push")

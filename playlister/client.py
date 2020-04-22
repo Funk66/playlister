@@ -1,5 +1,5 @@
 from argparse import ArgumentParser, Namespace
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from html.parser import unescape
 from logging import DEBUG, INFO, basicConfig
 from random import shuffle
@@ -26,8 +26,11 @@ def arguments() -> Namespace:
     parser.add_argument(
         "-v", help="Verbose logging", action="store_true", dest="verbose"
     )
-    subparser = parser.add_subparsers(dest="command")
-    subparser.add_parser("update", description="Update playlists")
+    subparser = parser.add_subparsers(dest="command", required=True)
+    update = subparser.add_parser("update", description="Update playlists")
+    update.add_argument(
+        "-w", help="Weekly update", action="store_true", dest="weekly"
+    )
     fix_command = subparser.add_parser(
         "fix", description="Manually correlate Spotify tracks"
     )
@@ -85,6 +88,7 @@ def download(
 def fix(channel: Channel) -> None:
     table = Table(channel)
     spotify = Spotify()
+    modified = False
     unmatched = [track for track in table.tracks if not track.spotify]
     shuffle(unmatched)
     while unmatched:
@@ -104,21 +108,37 @@ def fix(channel: Channel) -> None:
         try:
             selection = int(input("Selection: "))
             track.spotify = tracks[selection]
+            modified = True
         except (ValueError, IndexError):
             print("Invalid selection")
             continue
-    table.write()
-    git("commit", "-am", f"Fixing tracks on the {channel.name} channel")
+    if modified:
+        table.write()
+        git("commit", "-am", f"Fixing tracks on the {channel.name} channel")
+        git("push")
 
 
-def git(*command: str) -> None:
-    log.info(f"{command[0].title()}ing changes")
+def stale(check: bool) -> None:
+    if check:
+        current_week = datetime.today().isocalendar()[:2]
+        last_commit = git('show', '-s', '--format=%cI', verbose=False)
+        last_week = datetime.fromisoformat(last_commit).isocalendar()[:2]
+        if current_week <= last_week:
+            log.info("Already up-to-date")
+            exit(0)
+
+
+def git(*command: str, verbose=True) -> str:
+    if verbose:
+        log.info(f"{command[0].title()}ing changes")
     ps = run(["git", *command], cwd=Config.path.parent, capture_output=True)
     output = ps.stdout.decode("utf8")
     if ps.returncode != 0:
         log.error(output)
         exit()
-    log.debug(output)
+    if verbose:
+        log.debug(output)
+    return output.strip()
 
 
 def main() -> None:
@@ -128,9 +148,11 @@ def main() -> None:
         client = input("Client id: ")
         secret = input("Client secret: ")
         Config.update(client=client, secret=secret)
-    git("pull")
-    if not args.command or args.command == "update":
+    if args.command == "update":
+        stale(args.weekly)
+        git("pull")
+        stale(args.weekly)
         update()
+        git("push")
     elif args.command == "fix":
         fix(args.channel)
-    git("push")

@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='playlister',
-    version='0.1.0',
+    version='0.2.0',
     author='Guillermo Guirao Aguilar',
     author_email='contact@guillermoguiraoaguilar.com',
     py_modules=['playlister'],

@@ -1,0 +1,22 @@
+name: Sync
+on:
+  schedule:
+    - cron: "0 0 * * 0"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Download
+        env:
+          PASSWORD: ${{ secrets.PASSWORD }}
+        run: git clone --depth 1 https://ggaguilar:$PASSWORD@bitbucket.org/ggaguilar/playlister.git $HOME/.config/playlister
+      - name: Setup
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - name: Install
+        run: python3 setup.py install
+      - name: Update
+        run: playlister update -w

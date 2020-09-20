@@ -124,7 +124,7 @@ def stale(check: bool) -> None:
         last_commit = git('show', '-s', '--format=%cI', verbose=False)
         last_week = datetime.fromisoformat(last_commit).isocalendar()[:2]
         if current_week <= last_week:
-            log.info("Already up-to-date")
+            log.info("Already up to date")
             exit(0)
 
 

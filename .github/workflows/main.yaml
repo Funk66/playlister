@@ -11,7 +11,12 @@ jobs:
       - name: Download
         env:
           PASSWORD: ${{ secrets.PASSWORD }}
-        run: git clone --depth 1 https://ggaguilar:$PASSWORD@bitbucket.org/ggaguilar/playlister.git $HOME/.config/playlister
+        run: |
+          git config --global user.name 'GitHub CI'
+          git config --global user.email 'contact@guillermoguiraoaguilar.com'
+          git clone --depth 1 https://ggaguilar:$PASSWORD@bitbucket.org/ggaguilar/playlister.git $HOME/.config/playlister
+          cd $HOME/.config/playlister
+          git remote set-url origin https://ggaguilar:$PASSWORD@bitbucket.org/ggaguilar/playlister.git
       - name: Setup
         uses: actions/setup-python@v1
         with:

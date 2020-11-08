@@ -2,7 +2,7 @@ from csv import reader, writer
 from collections import defaultdict
 from datetime import date
 from re import IGNORECASE, sub
-from typing import Dict, Iterable, Set, List, Optional, Tuple
+from typing import Dict, Iterable, Set, List, Optional, Tuple, Generator
 
 from . import Channel, Config, log
 from .spotify import SpotifyTrack
@@ -31,6 +31,9 @@ class Track:
         if hasattr(obj, 'id'):
             return self.id == obj.id
         return False
+
+    def __hash__(self) -> int:
+        return hash(str(self))
 
     @property
     def id(self) -> TrackId:
@@ -138,6 +141,7 @@ class Table:
             writer(output).writerows(rows)
 
     def selection(self, total: int = 100) -> List[SpotifyTrack]:
+        """ List of recently played tracks """
         bucket: Dict[date, Set[SpotifyTrack]] = defaultdict(set)
         selection: List[SpotifyTrack] = []
         for track in self.tracks:
@@ -149,6 +153,29 @@ class Table:
             if len(selection) > 100:
                 return selection[:100]
         return selection
+
+    def duplicates(self) -> List[List[Track]]:
+        """ List of duplicate Spotify URIs by descending order of frequency """
+        tracks = defaultdict(list)
+        for track in self.tracks:
+            if track.spotify:
+                tracks[track.spotify.uri].append(track)
+        duplicates = []
+        for uri, tracklist in tracks.items():
+            duplicates.append([track for track in tracklist if len(tracklist) > 1])
+        return sorted(duplicates, key=lambda t: len(t), reverse=True)
+
+    def most_played(self, since: date = date(2000, 1, 1)) -> List[Track]:
+        """ List of tracks played since 'date' sorted by descending order of frequency """
+        return sorted(
+            self.tracks,
+            key=lambda t: len([p for p in t.timeline if p > since]),
+            reverse=True,
+        )
+
+    def unmatched(self) -> Generator[Track, None, None]:
+        """ List of tracks without a Spotify match """
+        return (track for track in self.tracks if track.spotify is None)
 
     @property
     def last_date(self) -> date:

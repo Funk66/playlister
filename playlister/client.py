@@ -8,7 +8,7 @@ from subprocess import run
 
 from urllib3 import connection_from_url
 
-from . import Channel, Config, log
+from . import Channel, Config, ConfigError, log
 from .spotify import Spotify
 from .tracks import Table, Track
 
@@ -35,6 +35,9 @@ def arguments() -> Namespace:
         "fix", description="Manually correlate Spotify tracks"
     )
     fix_command.add_argument("channel", help="Radio channel", type=Channel)
+    fix_command = subparser.add_parser(
+        "config", description="Provide Spotify client id and secret"
+    )
     return parser.parse_args()
 
 
@@ -145,9 +148,7 @@ def main() -> None:
     args = arguments()
     basicConfig(level=DEBUG if args.verbose else INFO, format="%(message)s")
     if not (Config.client and Config.secret):
-        client = input("Client id: ")
-        secret = input("Client secret: ")
-        Config.update(client=client, secret=secret)
+        raise ConfigError("Client not configured!")
     if args.command == "update":
         stale(args.weekly)
         git("pull")
@@ -156,3 +157,7 @@ def main() -> None:
         git("push")
     elif args.command == "fix":
         fix(args.channel)
+    elif args.command == "config":
+        client = input("Client id: ")
+        secret = input("Client secret: ")
+        Config.update(client=client, secret=secret)

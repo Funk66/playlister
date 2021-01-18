@@ -6,7 +6,7 @@ from random import shuffle
 from re import findall
 from subprocess import run
 
-from urllib3 import connection_from_url
+from urllib3 import PoolManager
 
 from . import Channel, Config, log
 from .spotify import Spotify
@@ -16,6 +16,7 @@ today = date.today()
 red_cross = "\033[91m\u2717\033[0m"
 blue_arrow = "\033[94m\u279a\033[0m"
 green_check = "\033[92m\u2713\033[0m"
+http = PoolManager()
 
 
 def arguments() -> Namespace:
@@ -28,9 +29,7 @@ def arguments() -> Namespace:
     )
     subparser = parser.add_subparsers(dest="command", required=True)
     update = subparser.add_parser("update", description="Update playlists")
-    update.add_argument(
-        "-w", help="Weekly update", action="store_true", dest="weekly"
-    )
+    update.add_argument("-w", help="Weekly update", action="store_true", dest="weekly")
     fix_command = subparser.add_parser(
         "fix", description="Manually correlate Spotify tracks"
     )
@@ -58,9 +57,9 @@ def download(
 ) -> None:
     total = len(table)
     log.info(f"Downloading playlist for {date}")
-    url = connection_from_url(f"http://www.radioswiss{channel.name}.ch")
-    page = url.request(
-        "GET", f"/en/music-programme/search/{date.year}{date.month:02}{date.day:02}"
+    page = http.request(
+        "GET",
+        f"http://www.radioswiss{channel.name}.ch/en/music-programme/search/{date.year}{date.month:02}{date.day:02}",
     )
     html = unescape(page.data.decode())
     regex = r'<span class="{}">\n\s+([\W\w\s]*?){}\n\s+</span>'
@@ -121,7 +120,7 @@ def fix(channel: Channel) -> None:
 def stale(check: bool) -> None:
     if check:
         current_week = datetime.today().isocalendar()[:2]
-        last_commit = git('show', '-s', '--format=%cI', verbose=False)
+        last_commit = git("show", "-s", "--format=%cI", verbose=False)
         last_week = datetime.fromisoformat(last_commit).isocalendar()[:2]
         if current_week <= last_week:
             log.info("Already up to date")

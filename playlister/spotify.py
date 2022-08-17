@@ -137,7 +137,11 @@ class Spotify:
         log.debug(f"Searching for {query}")
         response = self.client.request(
             'GET', f"{self.api_url}/search?{query}", headers=headers)
-        data = self.response(response)
+        try:
+            data = self.response(response)
+        except SpotifyError as error:
+            log.warning(error)
+            return None
         items = data['tracks']['items']
         if items:
             tracks = [

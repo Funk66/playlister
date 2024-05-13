@@ -59,7 +59,7 @@ def download(
     log.info(f"Downloading playlist for {date}")
     page = http.request(
         "GET",
-        f"http://www.radioswiss{channel.name}.ch/en/music-programme/search/{date.year}{date.month:02}{date.day:02}",
+        f"https://www.radioswiss{channel.name}.ch/en/music-programme/search/{date.year}{date.month:02}{date.day:02}",
     )
     html = unescape(page.data.decode())
     regex = r'<span class="{}">\n\s+([\W\w\s]*?){}\n\s+</span>'

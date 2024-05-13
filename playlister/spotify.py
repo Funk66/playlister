@@ -164,7 +164,7 @@ class Spotify:
         log.info('Updating playlist')
         response = self.client.request(
             'PUT', url, headers=headers, body=dumps(body))
-        self.response(response, 201)
+        self.response(response)
 
 
 class HTTPRequestHandler(BaseHTTPRequestHandler):

@@ -120,7 +120,16 @@ def fix(channel: Channel) -> None:
 def stale(check: bool) -> None:
     if check:
         current_week = datetime.today().isocalendar()[:2]
-        last_commit = git("show", "-s", "--format=%cI", verbose=False)
+        last_commit = git(
+            "log",
+            "-1",
+            "--format=%cI",
+            "--",
+            "jazz.csv",
+            "classic.csv",
+            "pop.csv",
+            verbose=False,
+        )
         last_week = datetime.fromisoformat(last_commit).isocalendar()[:2]
         if current_week <= last_week:
             log.info("Already up to date")

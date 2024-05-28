@@ -131,6 +131,8 @@ def stale(check: bool) -> None:
             verbose=False,
         )
         last_week = datetime.fromisoformat(last_commit).isocalendar()[:2]
+        log.debug(f"Current week: {current_week}")
+        log.debug(f"Last commit: {last_week}")
         if current_week <= last_week:
             log.info("Already up to date")
             exit(0)
